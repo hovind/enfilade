@@ -12,37 +12,23 @@ mod tests {
     }
 }
 
+struct Sin<E>(PhantomData<E>);
+struct Prod<E, F>(PhantomData<E>, PhantomData<F>);
 
-struct Sin<Expr> {
-    phantom: PhantomData<Expr>,
+struct Expr<E>(PhantomData<E>);
+
+
+fn f64() -> Expr<f64> {
+    Expr(PhantomData)
 }
 
-struct Cos<Expr> {
-    phantom: PhantomData<Expr>,
-}
-
-struct F64 {
-    phantom: PhantomData<f64>,
-}
-
-fn f64() -> F64 {
-    F64 { phantom: PhantomData }
-}
-
-impl F64 {
-    fn sin(self) -> Sin<Self> {
-        Sin { phantom: PhantomData }
-    }
-    fn cos(self) -> Cos<Self> {
-        Cos { phantom: PhantomData }
-    }
-}
-
-trait Evaluable {
+trait Evaluable: Sized {
     type Input;
     type Output;
     fn eval(self, x: Self::Input) -> Self::Output;
-    fn expr() -> Self;
+    fn expr() -> Expr<Self> {
+        Expr(PhantomData)
+    }
 }
 
 trait Trig {
@@ -60,22 +46,33 @@ impl Trig for f64 {
 }
 
 
-
-impl<E> Evaluable for Sin<E> where
-E: Evaluable,
-E::Output: Trig,
-{
-    type Input = E::Input;
-    type Output = E::Output;
-    fn eval(self, x: Self::Input) -> Self::Output {
-        E::expr().eval(x).sin()
-    }
-
-    fn expr() -> Self {
-        Sin { phantom: PhantomData }
+impl<E> Expr<E> {
+    fn sin() -> Expr<Sin<E>> {
+        Expr(PhantomData)
     }
 }
 
+
+impl<E> Evaluable for Expr<Sin<E>> where
+Expr<E>: Sized + Evaluable,
+<Expr<E> as Evaluable>::Output: Trig,
+{
+    type Input = <Expr<E> as Evaluable>::Input;
+    type Output = <Expr<E> as Evaluable>::Output;
+    fn eval(self, x: Self::Input) -> Self::Output {
+        E::expr().eval(x).sin()
+    }
+}
+
+impl Evaluable for Expr<f64> where
+{
+    type Input = f64;
+    type Output = f64;
+    fn eval(self, x: Self::Input) -> Self::Output {
+        x
+    }
+}
+/*
 impl<E> Evaluable for Cos<E> where
 E: Evaluable,
 E::Output: Trig,
@@ -103,3 +100,4 @@ impl Evaluable for F64 where
         F64 { phantom: PhantomData }
     }
 }
+*/
